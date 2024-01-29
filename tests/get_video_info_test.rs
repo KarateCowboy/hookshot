@@ -7,7 +7,7 @@ use hookshot::{grok_url_arg, parse_asset_id, parse_platform, video_from_url, Pla
 #[test]
 fn grok_url_string() {
     let video_url = String::from("https://www.youtube.com/watch?v=Fi5eYLA0uAg");
-    let result = grok_url_arg(video_url.clone());
+    grok_url_arg(video_url.clone());
     assert_that!(video_url.parse::<Url>()).is_ok();
 }
 
@@ -38,16 +38,16 @@ fn parse_unkown_platform() {
 }
 
 #[test]
-fn parse_query_yt_asset_id() {
+fn parse_yt_asset_id_in_query() {
     let video_url = grok_url_arg(String::from("https://www.youtube.com/watch?v=Fi5eYLA0uAg"));
     let asset_id = parse_asset_id(&video_url);
-    println!("{:?}", asset_id);
+    assert_that!(asset_id).is_equal_to(Some(String::from("Fi5eYLA0uAg")));
 }
 #[test]
-fn parse_segment_yt_asset_id() {
+fn parse_yt_asset_id_in_url_segment() {
     let video_url = grok_url_arg(String::from("https://youtu.be/Fi5eYLA0uAg?si=TMmFVQ6R7Zi8_6XV"));
     let asset_id = parse_asset_id(&video_url);
-    println!("{:?}", asset_id);
+    assert_that!(asset_id).is_equal_to(Some(String::from("Fi5eYLA0uAg")));
 }
 
 #[test]

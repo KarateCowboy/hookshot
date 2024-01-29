@@ -1,4 +1,4 @@
-use url::{Host, Url};
+use url::Url;
 
 pub struct Video {
     pub platform: Platform,
@@ -43,10 +43,40 @@ pub fn parse_platform(host_str: Option<String>) -> Platform {
         None => Platform::Unknown,
     }
 }
-
+// match url.query() {
+//             Some(v) => match find_param_value(&v, "v") {
+//                 Some(k) => Some(k),
+//                 _ => None,
+//             },
+//             None => None,
+//         }
 pub fn parse_asset_id(url: &Url) -> Option<String> {
-    return match url.query() {
-        Some(v) => Some(String::from("found")),
-        None => None,
+    return match url.path_segments().map(|c| c.collect::<Vec<&str>>()) {
+        Some(segment_vec) => match find_youtube_id(segment_vec) {
+            Some(id) => Some(id),
+            None => try_query_param_id(``)
+
+        },
+        None => ,
     };
+}
+fn find_param_value(query: &str, param: &str) -> Option<String> {
+    return query.split('&').find_map(|pair| {
+        let mut parts = pair.splitn(2, '=');
+        match (parts.next(), parts.next()) {
+            (Some(key), Some(value)) if key == param => Some(value.to_string()),
+            _ => None,
+        }
+    });
+}
+fn find_youtube_id(v: Vec<&str>) -> Option<String> {
+    println!("{:?}", v);
+    return v
+        .into_iter()
+        .find(|s| {
+            s.len() == 11
+                && s.chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        })
+        .map(|s| s.to_string());
 }
