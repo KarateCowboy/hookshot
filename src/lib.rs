@@ -50,14 +50,19 @@ pub fn parse_platform(host_str: Option<String>) -> Platform {
 //             },
 //             None => None,
 //         }
+pub fn try_query_param_id(query_portion: Option<String>) -> Option<String> {
+    match query_portion {
+        Some(val) => find_param_value(&val, "v"),
+        None => None,
+    }
+}
 pub fn parse_asset_id(url: &Url) -> Option<String> {
     return match url.path_segments().map(|c| c.collect::<Vec<&str>>()) {
         Some(segment_vec) => match find_youtube_id(segment_vec) {
             Some(id) => Some(id),
-            None => try_query_param_id(``)
-
+            None => try_query_param_id(url.query().as_str().clone())
         },
-        None => ,
+        None => None
     };
 }
 fn find_param_value(query: &str, param: &str) -> Option<String> {

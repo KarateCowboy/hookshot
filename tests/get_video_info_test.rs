@@ -38,7 +38,7 @@ fn parse_unkown_platform() {
 }
 
 #[test]
-fn parse_yt_asset_id_in_query() {
+fn yt_try_query_param_id() {
     let video_url = grok_url_arg(String::from("https://www.youtube.com/watch?v=Fi5eYLA0uAg"));
     let asset_id = parse_asset_id(&video_url);
     assert_that!(asset_id).is_equal_to(Some(String::from("Fi5eYLA0uAg")));
