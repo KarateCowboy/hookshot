@@ -69,37 +69,6 @@ fn grok_url_string() {
         .that(&video_url.parse::<Url>())
         .is_ok();
 }
-#[test]
-fn it_parses_the_youtube_url() {
-    let parsed_platform: Platform = parse_platform(Some("www.youtube.com".to_string()));
-    asserting!("Platform should be YouTube")
-        .that(&parsed_platform)
-        .is_equal_to(&Platform::YouTube);
-}
-
-#[test]
-fn parse_rumble_platform() {
-    let parsed_platform: Platform = parse_platform(Some("www.rumble.com".to_string()));
-    asserting!("Platform should be Rumble")
-        .that(&parsed_platform)
-        .is_equal_to(&Platform::Rumble);
-}
-
-#[test]
-fn parse_nico_platform() {
-    let parsed_platform: Platform = parse_platform(Some("www.nicovideo.jp".to_string()));
-    asserting!("Platform should be NicoVideo")
-        .that(&parsed_platform)
-        .is_equal_to(&Platform::NicoVideo);
-}
-
-#[test]
-fn parse_bitchute_platform() {
-    let parsed_platform: Platform = parse_platform(Some("www.bitchute.com".to_string()));
-    asserting!("Platform should be BitChute")
-        .that(&parsed_platform)
-        .is_equal_to(&Platform::BitChute);
-}
 
 #[test]
 fn parse_unknown_platform() {

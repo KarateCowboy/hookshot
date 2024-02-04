@@ -16,3 +16,13 @@ Feature: Parsing stuff with parse_platform
     When I parse it via parse_platform
     Then the resulting platform should be the Nico variant of the enum
 
+  Scenario: Happy path BitChute video URL was given
+    Given I have a proper Bitchute video URL
+    When I parse it via parse_platform
+    Then the resulting platform should be the BitChute variant of the enum
+
+  Scenario: Video URL from an unknown platform was given
+    Given I have a proper Fartstream video URL
+    When I parse it via parse_platform
+    Then the resulting platform should be the Unknown variant of the enum
+
