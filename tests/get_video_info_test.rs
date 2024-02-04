@@ -1,4 +1,5 @@
-use spectral::prelude::*; use url::Url;
+use spectral::prelude::*;
+use url::Url;
 
 use hookshot::{grok_url_arg, parse_asset_id, parse_platform, video_from_url, Platform, Video};
 

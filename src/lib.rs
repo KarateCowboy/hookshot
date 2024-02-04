@@ -25,7 +25,6 @@ pub fn video_from_url(video_url: &str) -> Video {
     println!("{:?}", host_val);
     return Video {
         platform: parse_platform(host_val.map(|s| s.to_string())),
-        // asset_id: parse_asset_id()
     };
 }
 pub fn parse_platform(host_str: Option<String>) -> Platform {
