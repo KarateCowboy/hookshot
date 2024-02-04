@@ -34,6 +34,13 @@ fn have_proper_rumble_video_url(world: &mut HookshotWorld) {
     let host = my_url.host_str().clone().map(|s| s.to_string());
     world.proper_video_url = host;
 }
+#[given("I have a proper Nico Video URL")]
+fn have_proper_nico_video_url(world: &mut HookshotWorld) {
+    let my_url = Url::parse(&String::from("http://www.nicovideo.jp")).expect("Invalid URL argument given");
+    let host = my_url.host_str().clone().map(|s| s.to_string());
+    world.proper_video_url = host;
+}
+
 #[when("I parse it via parse_platform")]
 fn parse_via_parse_platform(world: &mut HookshotWorld) {
     world.resulting_platform = parse_platform(world.proper_video_url.clone());
@@ -45,6 +52,10 @@ fn result_should_be_yt_enum(world: &mut HookshotWorld) {
 #[then("the resulting platform should be the Rumble variant of the enum")]
 fn result_should_be_rumble_enum(world: &mut HookshotWorld) {
     assert_eq!(world.resulting_platform, Platform::Rumble);
+}
+#[then("the resulting platform should be the Nico variant of the enum")]
+fn result_should_be_nico_enum(world: &mut HookshotWorld) {
+    assert_eq!(world.resulting_platform, Platform::NicoVideo);
 }
 // This runs before everything else, so you can setup things here.
 fn main() {
