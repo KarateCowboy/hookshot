@@ -4,9 +4,9 @@ pub struct Video {
     pub platform: Platform,
     // pub asset_id: String
 }
-
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Default)]
 pub enum Platform {
+    #[default]
     YouTube,
     Rumble,
     NicoVideo,

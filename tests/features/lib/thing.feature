@@ -1,6 +1,6 @@
-Feature: Parsing stuff
+Feature: Parsing stuff with parse_platform
 
   Scenario: Happy path youtube url was given
-    Given I have a number in a variable
-    When I add two to it
-    Then the number should be two larger
+    Given I have a proper youtube video URL
+    When I parse it via parse_platform
+    Then the resulting platform should be the Youtube variant of the enum
