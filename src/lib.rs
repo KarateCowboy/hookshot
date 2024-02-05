@@ -33,6 +33,7 @@ pub fn parse_platform(host_str: Option<String>) -> Platform {
             let val_lower = val.to_lowercase();
             match val_lower.as_str() {
                 "www.youtube.com" => Platform::YouTube,
+                "youtu.be" => Platform::YouTube,
                 "www.rumble.com" => Platform::Rumble,
                 "www.nicovideo.jp" => Platform::NicoVideo,
                 "www.bitchute.com" => Platform::BitChute,
@@ -42,20 +43,42 @@ pub fn parse_platform(host_str: Option<String>) -> Platform {
         None => Platform::Unknown,
     }
 }
-pub fn parse_asset_id(url: &Url) -> Option<String> {
+pub fn asset_id(url: &Url) -> Option<String> {
+    let platform = parse_platform(url.host_str().map(|s| s.to_string()));
+    println!("{:?}", platform);
+    match platform {
+        Platform::YouTube => parse_yt_asset_id(&url),
+        Platform::Rumble => parse_rumble_asset_id(&url),
+        _ => None,
+    }
+}
+
+fn parse_yt_asset_id(url: &Url) -> Option<String> {
     return match url.path_segments().map(|c| c.collect::<Vec<&str>>()) {
         Some(segment_vec) => match find_youtube_id(segment_vec) {
             Some(id) => Some(id),
-            None => {
-                match url.query() {
-                    Some(query) => find_param_value(&query, "v"),
-                    None => None
-                }
-            }
+            None => match url.query() {
+                Some(query) => find_param_value(&query, "v"),
+                None => None,
+            },
         },
-        None => None
+        None => None,
     };
 }
+
+fn parse_rumble_asset_id(url: &Url) -> Option<String> {
+    return match url.path_segments().map(|c| c.collect::<Vec<&str>>()) {
+        Some(segment_vec) => match find_rumble_id(segment_vec) {
+            Some(id) => Some(id),
+            None => match url.query() {
+                Some(query) => find_param_value(&query, "v"),
+                None => None,
+            },
+        },
+        None => None,
+    };
+}
+
 fn find_param_value(query: &str, param: &str) -> Option<String> {
     return query.split('&').find_map(|pair| {
         let mut parts = pair.splitn(2, '=');
@@ -66,13 +89,21 @@ fn find_param_value(query: &str, param: &str) -> Option<String> {
     });
 }
 fn find_youtube_id(v: Vec<&str>) -> Option<String> {
-    println!("{:?}", v);
     return v
         .into_iter()
         .find(|s| {
             s.len() == 11
                 && s.chars()
                     .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        })
+        .map(|s| s.to_string());
+}
+fn find_rumble_id(v: Vec<&str>) -> Option<String> {
+    return v
+        .into_iter()
+        .find(|s| {
+                s.chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
         })
         .map(|s| s.to_string());
 }
