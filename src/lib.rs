@@ -105,5 +105,5 @@ fn find_rumble_id(v: Vec<&str>) -> Option<String> {
                 s.chars()
                     .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
         })
-        .map(|s| s.to_string());
+        .map(|s| s.to_string().replace(".html", ""));
 }
