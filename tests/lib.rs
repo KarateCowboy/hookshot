@@ -1,13 +1,37 @@
 use cucumber::{given, then, when, World};
-use hookshot::{parse, Platform, Video, metadata};
+use hookshot::{metadata, parse, Platform, Video};
+use lazy_static::lazy_static;
+use mockito::{Server, ServerGuard};
 use spectral::prelude::*;
+use std::fmt;
+use std::sync::Mutex;
 use url::Url;
+use reqwest::Error;
+use serde::Deserialize;
 
 extern crate spectral;
+lazy_static! {
+    static ref MOCK_SERVER_MUTEX: Mutex<ServerGuard> = Mutex::new(Server::new());
+}
+#[derive(Deserialize)]
+struct ApiResponse {
+    items: Vec<Item>,
+}
+#[derive(Deserialize)]
+struct Item {
+    snippet: Snippet,
+}
+#[derive(Deserialize)]
+struct Snippet {
+    title: String,
+    description: String,
+    channel_name: String,
+    published_at: String,
+}
 
 // `World` is your shared, likely mutable state.
 // Cucumber constructs it via `Default::default()` for each scenario.
-#[derive(Debug, World)]
+#[derive(World, Debug)]
 pub struct HookshotWorld {
     proper_video_url: Url,
     url_string: String,
@@ -17,10 +41,24 @@ pub struct HookshotWorld {
     video: Video,
 }
 
+struct ServerWrapper(ServerGuard);
+
+impl fmt::Debug for ServerWrapper {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Since ServerGuard does not implement Debug, you cannot print its internals.
+        // You can print a placeholder, or any other debug information you see fit.
+        write!(f, "ServerGuardWrapper {{ /* ServerGuard instance */ }}")
+    }
+}
+
+async fn set_server() -> ServerGuard {
+    return Server::new_async().await;
+}
 impl Default for HookshotWorld {
     fn default() -> Self {
+        let mut server = Server::new();
         HookshotWorld {
-            proper_video_url: Url::parse("http://example.com").unwrap(), 
+            proper_video_url: Url::parse("http://example.com").unwrap(),
             resulting_platform: Platform::Unknown,
             url_string: String::new(),
             asset_id: None,
@@ -185,8 +223,17 @@ fn unknown_platform_on_video(world: &mut HookshotWorld) {
         .is_equal_to(None);
 }
 
-#[given("I have a youtube Video")]
-fn have_yt_video(world: &mut HookshotWorld) {
+#[given("I have a youtube Video for which I contact the API")]
+async fn have_yt_video(world: &mut HookshotWorld) {
+    let mut server = MOCK_SERVER_MUTEX.lock().unwrap();
+    server
+        .mock("GET", "/greetings")
+        .match_header("content-type", "application/json")
+        .match_body(mockito::Matcher::PartialJsonString(
+            "{\"greeting\": \"hello\"}".to_string(),
+        ))
+        .with_body("hello json")
+        .create();
     world.video = Video {
         platform: Platform::YouTube,
         asset_id: Some("crEz8i6oVpI".to_string()),
@@ -194,21 +241,18 @@ fn have_yt_video(world: &mut HookshotWorld) {
 }
 
 #[when("I fetch the metadata for it")]
-fn fetch_metadata(world: &mut HookshotWorld){
-    // let updated_video : Result<Video> = metadata(&world.video);
-
+async fn fetch_metadata(world: &mut HookshotWorld) {
+    let url = format!("http://localhost:80/greetinsg");
+    let response = reqwest::get(url)
+        .await
+        .json::<ApiResponse>()
+        .await;
 }
 // This runs before everything else, so you can setup things here.
 #[tokio::main]
-async fn main()  {
-    // You may choose any executor you like (`tokio`, `async-std`, etc.).
-    // You may even have an `async` main, it doesn't matter. The point is that
-    // Cucumber is composable. :)
-    futures::executor::block_on(HookshotWorld::run(
-        "tests/features/lib/parse_video_url_string.feature",
-    ));
-    futures::executor::block_on(HookshotWorld::run("tests/features/lib/make_video.feature"));
-    futures::executor::block_on(HookshotWorld::run(
-        "tests/features/lib/populate_metadata.feature",
-    ));
+async fn main() {
+    let _server = MOCK_SERVER_MUTEX.lock().unwrap();
+    HookshotWorld::run("tests/features/lib/parse_video_url_string.feature").await;
+    HookshotWorld::run("tests/features/lib/make_video.feature").await;
+    HookshotWorld::run("tests/features/lib/populate_metadata.feature").await;
 }
