@@ -1,29 +1,21 @@
 use reqwest::Error;
-use serde::Deserialize;
-
-#[derive(Deserialize)]
-struct ApiResponse {
-    items: Vec<Item>,
-}
-
-#[derive(Deserialize)]
-struct Item {
-    snippet: Snippet,
-}
-
-#[derive(Deserialize)]
-struct Snippet {
-    title: String,
-    description: String,
-    channel_name: String,
-    published_at: String,
-}
+// use serde::Deserialize;
 
 #[derive(Debug, Clone)]
 pub struct Video {
     pub platform: Platform,
-    pub asset_id: Option<String>
+    pub asset_id: Option<String>,
 }
+
+impl Video {
+    fn new() -> Self {
+        Video {
+            platform: Platform::Unknown,
+            asset_id: None,
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Debug, Default, Clone)]
 pub enum Platform {
     #[default]
@@ -57,7 +49,7 @@ pub enum Platform {
 //     Ok(())
 // }
 pub fn metadata(video: &Video) -> Result<Video, Error> {
-  return Ok(video.clone());
+    return Ok(video.clone());
 }
 pub mod parse {
     use crate::{Platform, Video};
@@ -87,7 +79,7 @@ pub mod parse {
         let host_val = my_url.host_str().clone();
         return Video {
             platform: parse_platform(host_val.map(|s| s.to_string())),
-            asset_id: asset_id(&my_url)
+            asset_id: asset_id(&my_url),
         };
     }
     pub fn asset_id(url: &Url) -> Option<String> {
@@ -152,5 +144,41 @@ pub mod parse {
                     .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
             })
             .map(|s| s.to_string().replace(".html", ""));
+    }
+}
+pub mod yt_controller {
+    use crate::{Platform, Video};
+    use url::Url;
+
+    pub async fn get_video_info(video: &Video) -> Video {
+        Video::new()
+    }
+}
+#[cfg(test)]
+mod yt_controller_tests {
+    use crate::yt_controller;
+    use tokio;
+
+    #[tokio::test]
+    async fn get_video_info() {}
+}
+
+#[cfg(test)]
+mod video_module_tests {
+    use crate::{Platform, Video};
+    use spectral::prelude::*;
+    #[test]
+    fn video_new() {
+        let basic_video = Video::new();
+        asserting!(
+            "Video 'new' factory function returns a basic Video struct with 'Unknown' enum variant"
+        )
+        .that(&basic_video.platform)
+        .is_equal_to(Platform::Unknown);
+        asserting!(
+            "Video 'new' factory function returns a basic Video struct with asset_id of None"
+        )
+        .that(&basic_video.asset_id)
+        .is_equal_to(None);
     }
 }

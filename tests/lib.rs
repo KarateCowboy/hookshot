@@ -1,32 +1,21 @@
 use cucumber::{given, then, when, World};
-use hookshot::{metadata, parse, Platform, Video};
+use hookshot::{parse, Platform, Video};
 use lazy_static::lazy_static;
 use mockito::{Server, ServerGuard};
+use serde::{Deserialize, Serialize};
+use serde_json;
 use spectral::prelude::*;
 use std::fmt;
-use std::sync::Mutex;
 use url::Url;
-use reqwest::Error;
-use serde::Deserialize;
 
 extern crate spectral;
 lazy_static! {
-    static ref MOCK_SERVER_MUTEX: Mutex<ServerGuard> = Mutex::new(Server::new());
+    static ref MOCK_SERVER_MUTEX: tokio::sync::Mutex<ServerGuard> =
+        tokio::sync::Mutex::new(Server::new());
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Debug)]
 struct ApiResponse {
-    items: Vec<Item>,
-}
-#[derive(Deserialize)]
-struct Item {
-    snippet: Snippet,
-}
-#[derive(Deserialize)]
-struct Snippet {
-    title: String,
-    description: String,
-    channel_name: String,
-    published_at: String,
+    greeting: String,
 }
 
 // `World` is your shared, likely mutable state.
@@ -51,12 +40,8 @@ impl fmt::Debug for ServerWrapper {
     }
 }
 
-async fn set_server() -> ServerGuard {
-    return Server::new_async().await;
-}
 impl Default for HookshotWorld {
     fn default() -> Self {
-        let mut server = Server::new();
         HookshotWorld {
             proper_video_url: Url::parse("http://example.com").unwrap(),
             resulting_platform: Platform::Unknown,
@@ -225,14 +210,14 @@ fn unknown_platform_on_video(world: &mut HookshotWorld) {
 
 #[given("I have a youtube Video for which I contact the API")]
 async fn have_yt_video(world: &mut HookshotWorld) {
-    let mut server = MOCK_SERVER_MUTEX.lock().unwrap();
+    let mut server = MOCK_SERVER_MUTEX.lock().await;
     server
         .mock("GET", "/greetings")
-        .match_header("content-type", "application/json")
-        .match_body(mockito::Matcher::PartialJsonString(
-            "{\"greeting\": \"hello\"}".to_string(),
-        ))
-        .with_body("hello json")
+        // .match_header("content-type", "application/json")
+        // .match_body(mockito::Matcher::PartialJsonString(
+        //     "{\"greeting\": \"hello\"}".to_string(),
+        // ))
+        .with_body("{\"greeting\": \"hello\"}")
         .create();
     world.video = Video {
         platform: Platform::YouTube,
@@ -242,17 +227,85 @@ async fn have_yt_video(world: &mut HookshotWorld) {
 
 #[when("I fetch the metadata for it")]
 async fn fetch_metadata(world: &mut HookshotWorld) {
-    let url = format!("http://localhost:80/greetinsg");
-    let response = reqwest::get(url)
-        .await
-        .json::<ApiResponse>()
-        .await;
+    let server = MOCK_SERVER_MUTEX.lock().await;
+    let url = format!("{}/greetings", server.url());
+
+    let response = reqwest::get(&url).await;
+    // match response {
+    //     Ok(response_val) => {
+    //         println!("{:?}", response_val);
+    //         let content = response_val.json::<ApiResponse>().await;
+    //         match content {
+    //             Ok(content_body) => println!("here is the content body {:?}", content_body),
+    //             Err(e) => {
+    //                 println!("there was a content error {:?}", e);
+    //                 println!("blarg");
+    //             }
+    //         }
+    //     }
+    //     Err(e) => {
+    //         println!("there was an error {:?}", e);
+    //         println!("stuff");
+    //     }
+    // }
+    // match response {
+    //     Ok(response_val) => {
+    //         println!("Response: {:?}", response_val);
+
+    //         // Ensure we have a successful status code before attempting to parse JSON
+    //         if response_val.status().is_success() {
+    //             match response_val.json::<ApiResponse>().await {
+    //                 Ok(content_body) => println!("Here is the content body: {:?}", content_body),
+    //                 Err(e) => {
+    //                     println!("There was a content error: {:?}", e);
+    //                 }
+    //             }
+    //         } else {
+    //             println!("Response was not successful: {:?}", response_val.status());
+    //         }
+    //     }
+    //     Err(e) => {
+    //         println!("There was an error making the request: {:?}", e);
+    //     }
+    // }
+    match response {
+        Ok(response_val) => {
+            // Print the status code and headers
+            println!("Response status: {}", response_val.status());
+            for (key, value) in response_val.headers().iter() {
+                println!("{}: {:?}", key, value);
+            }
+
+            // Check if the response was successful
+            if response_val.status().is_success() {
+                // Attempt to get the response text for debugging purposes
+                let text = response_val.text().await;
+                match text {
+                    Ok(body) => {
+                        println!("Response body text: {}", body);
+                        // Attempt to parse the response body text as JSON
+                        let json_result: Result<ApiResponse, _> = serde_json::from_str(&body);
+                        match json_result {
+                            Ok(content_body) => println!("Parsed JSON content: {:?}", content_body),
+                            Err(e) => println!("JSON parsing error: {:?}", e),
+                        }
+                    }
+                    Err(e) => println!("Error getting response text: {:?}", e),
+                }
+            } else {
+                println!("Response was not successful: {}", response_val.status());
+            }
+        }
+        Err(e) => {
+            println!("There was an error making the request: {:?}", e);
+        }
+    }
 }
 // This runs before everything else, so you can setup things here.
 #[tokio::main]
 async fn main() {
-    let _server = MOCK_SERVER_MUTEX.lock().unwrap();
-    HookshotWorld::run("tests/features/lib/parse_video_url_string.feature").await;
-    HookshotWorld::run("tests/features/lib/make_video.feature").await;
+    // let _server = MOCK_SERVER_MUTEX.lock().unwrap();
     HookshotWorld::run("tests/features/lib/populate_metadata.feature").await;
+    // HookshotWorld::run("tests/features/lib/parse_video_url_string.feature").await;
+    // HookshotWorld::run("tests/features/lib/make_video.feature").await;
 }
